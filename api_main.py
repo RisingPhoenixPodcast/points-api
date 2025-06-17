@@ -18,6 +18,11 @@ class PointSet(BaseModel):
     user_id: int
     points: int
 
+class MentorAssignment(BaseModel):
+    mentor_id: int
+    mentee_id: int
+
+
 # --- Database Setup ---
 async def setup_database():
     """Creates the new, efficient user_points table."""
@@ -32,6 +37,17 @@ async def setup_database():
     )
     """)
     print("✅ 'user_points' table is ready.")
+
+    await database.execute("""
+    CREATE TABLE IF NOT EXISTS mentor_assignments (
+        mentor_id BIGINT NOT NULL,
+        mentee_id BIGINT NOT NULL,
+        assigned_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        PRIMARY KEY (mentor_id, mentee_id)
+    )
+    """)
+    print("✅ 'mentor_assignments' table is ready.")
+
 
 # --- API Events ---
 @app.on_event("startup")
@@ -95,3 +111,23 @@ async def set_points(data: PointSet):
     except Exception as e:
         print(f"Error setting points: {e}")
         raise HTTPException(status_code=500, detail="Error setting points in database.")
+
+
+# 👇 NEW: Mentor Assignment Model and Route
+
+class MentorAssignment(BaseModel):
+    mentor_id: int
+    mentee_id: int
+
+@app.post("/mentor-assignments")
+async def assign_mentor(data: MentorAssignment):
+    query = """
+    INSERT INTO mentor_assignments (mentor_id, mentee_id)
+    VALUES (:mentor_id, :mentee_id)
+    """
+    try:
+        await database.execute(query, values={"mentor_id": data.mentor_id, "mentee_id": data.mentee_id})
+        return {"message": "Mentor assigned successfully"}
+    except Exception as e:
+        print(f"Error assigning mentor: {e}")
+        raise HTTPException(status_code=500, detail="Failed to assign mentor")

@@ -129,5 +129,6 @@ async def assign_mentor(data: MentorAssignment):
         await database.execute(query, values={"mentor_id": data.mentor_id, "mentee_id": data.mentee_id})
         return {"message": "Mentor assigned successfully"}
     except Exception as e:
-        print(f"Error assigning mentor: {e}")
+        print(f"🔥 ERROR assigning mentor: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail="Failed to assign mentor")
+

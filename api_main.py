@@ -4,7 +4,7 @@ from databases import Database
 import asyncio
 
 # --- Configuration ---
-DATABASE_URL = "mysql://root:UdELAxesZYuFCtrPNMlEQWAuLhFKajbo@centerbeam.proxy.rlwy.net:40467/railway"
+DATABASE_URL = "mysql://root:UdELAxesZYuFCtrPNMlEQWAuLhFKajbo@mysql.railway.internal:3306/railway"
 
 database = Database(DATABASE_URL)
 app = FastAPI()

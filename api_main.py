@@ -113,12 +113,6 @@ async def set_points(data: PointSet):
         raise HTTPException(status_code=500, detail="Error setting points in database.")
 
 
-# 👇 NEW: Mentor Assignment Model and Route
-
-class MentorAssignment(BaseModel):
-    mentor_id: int
-    mentee_id: int
-
 @app.post("/mentor-assignments")
 async def assign_mentor(data: MentorAssignment):
     query = """

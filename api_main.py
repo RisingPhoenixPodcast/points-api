@@ -126,3 +126,8 @@ async def assign_mentor(data: MentorAssignment):
         print(f"🔥 ERROR assigning mentor: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail="Failed to assign mentor")
 
+@app.get("/")
+async def root():
+    return {"message": "Mentor API is running"}
+
+

@@ -2,3 +2,5 @@ fastapi
 uvicorn
 aiomysql
 databases[postgresql]
+cryptography
+

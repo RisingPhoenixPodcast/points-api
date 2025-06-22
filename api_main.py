@@ -8,7 +8,7 @@ import asyncio
 
 # --- Configuration ---
 # Use the public URL for your database from Railway's "Variables" tab
-DATABASE_URL = "mysql://root:UdELAxesZYuFCtrPNMlEQWAuLhFKajbo@centerbeam.proxy.rlwy.net:40467/railway"
+DATABASE_URL = "postgresql://mentor_bot_db_user:cw9Bo3Axpe8kd7KfxCH2PEs8zsWB340Z@dpg-d1c0ehre5dus73f26a6g-a/mentor_bot_db"
 
 database = Database(DATABASE_URL)
 app = FastAPI()

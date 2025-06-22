@@ -26,7 +26,6 @@ class MentorAssignment(BaseModel):
     mentor_id: int
     mentee_id: int
 
-# NEW: Added a model for check-in data
 class CheckIn(BaseModel):
     user_id: int
     checkin_type: str
@@ -92,4 +91,76 @@ async def add_points(data: PointUpdate):
     try:
         await database.execute(query, values={"user_id": data.user_id, "points": data.points})
         new_total_data = await get_points(data.user_id)
-        return {"user_id": data.user_id}
+        return {"user_id": data.user_id, "new_total": new_total_data.get("points")}
+    except Exception as e:
+        print(f"Error adding points: {e}")
+        raise HTTPException(status_code=500, detail="Error updating points in database.")
+
+
+@app.get("/get_points/{user_id}")
+async def get_points(user_id: int):
+    query = "SELECT points FROM user_points WHERE user_id = :user_id"
+    result = await database.fetch_one(query, values={"user_id": user_id})
+    if result:
+        return {"user_id": user_id, "points": result["points"]}
+    else:
+        return {"user_id": user_id, "points": 0}
+
+@app.post("/set_points")
+async def set_points(data: PointSet):
+    query = """
+    INSERT INTO user_points (user_id, points)
+    VALUES (:user_id, :points)
+    ON CONFLICT (user_id) DO UPDATE SET points = :points;
+    """
+    try:
+        await database.execute(query, values={"user_id": data.user_id, "points": data.points})
+        return {"message": f"User {data.user_id} points set to {data.points}."}
+    except Exception as e:
+        print(f"Error setting points: {e}")
+        raise HTTPException(status_code=500, detail="Error setting points in database.")
+
+
+@app.post("/mentor-assignments")
+async def assign_mentor(data: MentorAssignment):
+    query = """
+    INSERT INTO mentor_assignments (mentor_id, mentee_id)
+    VALUES (:mentor_id, :mentee_id)
+    """
+    try:
+        await database.execute(query, values={"mentor_id": data.mentor_id, "mentee_id": data.mentee_id})
+        return {"message": "Mentor assigned successfully"}
+    except Exception as e:
+        if 'unique constraint' in str(e).lower():
+            raise HTTPException(status_code=400, detail="This mentor/mentee pairing already exists.")
+        print(f"🔥 ERROR assigning mentor: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=500, detail="An unexpected error occurred in the database.")
+
+
+# NEW: Added endpoint for logging check-ins
+@app.post("/log-checkin")
+async def log_checkin(data: CheckIn):
+    if data.checkin_type.lower() not in ['good', 'bad']:
+        raise HTTPException(status_code=400, detail="Invalid checkin_type. Must be 'good' or 'bad'.")
+
+    query = """
+    INSERT INTO daily_checkins (user_id, checkin_type)
+    VALUES (:user_id, :checkin_type)
+    """
+    try:
+        await database.execute(query, values={"user_id": data.user_id, "checkin_type": data.checkin_type.lower()})
+        return {"message": f"Successfully logged '{data.checkin_type}' check-in for user {data.user_id}."}
+    except Exception as e:
+        print(f"🔥 ERROR logging checkin: {e}")
+        raise HTTPException(status_code=500, detail="Failed to log check-in.")
+
+
+@app.get("/")
+async def root():
+    return {"message": "Mentor API is running"}
+
+
+# --- Server Startup Logic ---
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 8080))
+    uvicorn.run("api_main:app", host="0.0.0.0", port=port, reload=False)

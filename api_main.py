@@ -92,4 +92,4 @@ async def add_points(data: PointUpdate):
     try:
         await database.execute(query, values={"user_id": data.user_id, "points": data.points})
         new_total_data = await get_points(data.user_id)
-        return {"user_id": data.user_id
+        return {"user_id": data.user_id}

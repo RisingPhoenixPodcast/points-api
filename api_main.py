@@ -62,7 +62,7 @@ async def startup_event():
     """)
     print("✅ 'mentor_assignments' table is ready.")
     
-    # NEW: Added table creation for daily check-ins
+    # Added table creation for daily check-ins
     await database.execute("""
     CREATE TABLE IF NOT EXISTS daily_checkins (
         checkin_id SERIAL PRIMARY KEY,
@@ -120,8 +120,6 @@ async def set_points(data: PointSet):
         print(f"Error setting points: {e}")
         raise HTTPException(status_code=500, detail="Error setting points in database.")
 
-
-# --- THIS IS THE CORRECTED AND REWRITTEN ENDPOINT ---
 @app.post("/mentor-assignments")
 async def manage_mentor_assignment(data: MentorAssignment):
     """
@@ -130,28 +128,36 @@ async def manage_mentor_assignment(data: MentorAssignment):
     If the pair does not exist, it's created (assigned).
     """
     try:
-        # Step 1: Check if the assignment already exists
         select_query = "SELECT mentor_id FROM mentor_assignments WHERE mentor_id = :mentor_id AND mentee_id = :mentee_id"
         values = {"mentor_id": data.mentor_id, "mentee_id": data.mentee_id}
         existing_assignment = await database.fetch_one(select_query, values)
 
         if existing_assignment:
-            # Step 2: If it exists, DELETE it (un-assign)
             delete_query = "DELETE FROM mentor_assignments WHERE mentor_id = :mentor_id AND mentee_id = :mentee_id"
             await database.execute(delete_query, values)
             print(f"✅ Unassigned mentor {data.mentor_id} from mentee {data.mentee_id}")
             return {"message": "Mentor unassigned successfully"}
         else:
-            # Step 3: If it does not exist, INSERT it (assign)
             insert_query = "INSERT INTO mentor_assignments (mentor_id, mentee_id) VALUES (:mentor_id, :mentee_id)"
             await database.execute(insert_query, values)
             print(f"✅ Assigned mentor {data.mentor_id} to mentee {data.mentee_id}")
             return {"message": "Mentor assigned successfully"}
             
     except Exception as e:
-        # Step 4: Catch any other unexpected database errors
         print(f"🔥 ERROR managing mentor assignment: {type(e).__name__} - {e}")
         raise HTTPException(status_code=500, detail="An unexpected database error occurred.")
+
+# --- NEW ENDPOINT FOR THE REMINDER LOOP ---
+@app.get("/mentor-assignments")
+async def get_all_assignments():
+    """Fetches all mentor-mentee assignments from the database."""
+    try:
+        query = "SELECT mentor_id, mentee_id FROM mentor_assignments"
+        assignments = await database.fetch_all(query)
+        return assignments
+    except Exception as e:
+        print(f"🔥 ERROR fetching all assignments: {e}")
+        raise HTTPException(status_code=500, detail="Failed to retrieve assignments from database.")
 
 
 @app.post("/log-checkin")

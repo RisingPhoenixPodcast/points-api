@@ -121,23 +121,39 @@ async def set_points(data: PointSet):
         raise HTTPException(status_code=500, detail="Error setting points in database.")
 
 
+# --- THIS IS THE CORRECTED AND REWRITTEN ENDPOINT ---
 @app.post("/mentor-assignments")
-async def assign_mentor(data: MentorAssignment):
-    query = """
-    INSERT INTO mentor_assignments (mentor_id, mentee_id)
-    VALUES (:mentor_id, :mentee_id)
+async def manage_mentor_assignment(data: MentorAssignment):
+    """
+    Handles both assigning and un-assigning a mentor.
+    If the pair exists, it's deleted (unassigned).
+    If the pair does not exist, it's created (assigned).
     """
     try:
-        await database.execute(query, values={"mentor_id": data.mentor_id, "mentee_id": data.mentee_id})
-        return {"message": "Mentor assigned successfully"}
+        # Step 1: Check if the assignment already exists
+        select_query = "SELECT mentor_id FROM mentor_assignments WHERE mentor_id = :mentor_id AND mentee_id = :mentee_id"
+        values = {"mentor_id": data.mentor_id, "mentee_id": data.mentee_id}
+        existing_assignment = await database.fetch_one(select_query, values)
+
+        if existing_assignment:
+            # Step 2: If it exists, DELETE it (un-assign)
+            delete_query = "DELETE FROM mentor_assignments WHERE mentor_id = :mentor_id AND mentee_id = :mentee_id"
+            await database.execute(delete_query, values)
+            print(f"✅ Unassigned mentor {data.mentor_id} from mentee {data.mentee_id}")
+            return {"message": "Mentor unassigned successfully"}
+        else:
+            # Step 3: If it does not exist, INSERT it (assign)
+            insert_query = "INSERT INTO mentor_assignments (mentor_id, mentee_id) VALUES (:mentor_id, :mentee_id)"
+            await database.execute(insert_query, values)
+            print(f"✅ Assigned mentor {data.mentor_id} to mentee {data.mentee_id}")
+            return {"message": "Mentor assigned successfully"}
+            
     except Exception as e:
-        if 'unique constraint' in str(e).lower():
-            raise HTTPException(status_code=400, detail="This mentor/mentee pairing already exists.")
-        print(f"🔥 ERROR assigning mentor: {type(e).__name__} - {e}")
-        raise HTTPException(status_code=500, detail="An unexpected error occurred in the database.")
+        # Step 4: Catch any other unexpected database errors
+        print(f"🔥 ERROR managing mentor assignment: {type(e).__name__} - {e}")
+        raise HTTPException(status_code=500, detail="An unexpected database error occurred.")
 
 
-# NEW: Added endpoint for logging check-ins
 @app.post("/log-checkin")
 async def log_checkin(data: CheckIn):
     if data.checkin_type.lower() not in ['good', 'bad']:
